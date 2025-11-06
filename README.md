@@ -1,16 +1,43 @@
-# sandwich shop
+SANDWITCH SHOP
+this is a small app where you can order sandwitches
 
-A new Flutter project.
+key features # ordering sandwitches, personalising sandwitches, etc
 
-## Getting Started
+requires #
+ - computer
+ - OS
+ - mouse + keyboard
+ - flutter SDK
+ - dart
 
-This project is a starting point for a Flutter application.
+to clone this repository :
+  - use the clone command with this link --"github.com/Finn-Cullen/sandwitch-shop"--
 
-A few resources to get you started if this is your first Flutter project:
+  to install this app : 
+  1 - download zip file
+  2 - unzip
+  3 - ensure you have all the required software and hardware
+  4 - an IDE
+  5 - find the maind.dart file
+  6 - run the file in a browser of choice
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+how to use : 
+  - add sandwitches for more sandwitch
+  - subtract sandwitches for less
+  - add toppings for taste and toast as pleases
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+there is no config
+to run tests find the tests folder and run the "void main" functions
+
+folders are organised with relevent code sorted into the coresponding folder
+
+no key dependencies
+
+dev tools : vscode
+
+no bugs known
+
+future improvements include more sandwitches
+
+Finn Cullen
+ - up2274400@myport.ac.uk
