@@ -10,20 +10,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sandwitch_shop/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    //await tester.pumpWidget(const MyApp());
+  testWidgets('Quantity increments when add icon tapped', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: OrderScreen(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // initial quantity is 1
+    expect(find.text('1'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
+    // Ensure the '+' icon is visible (scroll into view) then tap.
+    await tester.ensureVisible(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that our quantity has incremented to 2.
+    expect(find.text('2'), findsOneWidget);
   });
 }

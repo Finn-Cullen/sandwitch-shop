@@ -1,17 +1,8 @@
 import 'package:flutter/material.dart';
-import 'views/app_styles.dart';
-import 'repositories/order_repository.dart';
-import 'repositories/price_calc.dart';
-
-// how to push file
-
-// cd = C:\UNIVERSITY_WORK\LV_5\programming_applications_programming_languages\fuck
-// git init
-// git add "file name"
-// git commit -m "Set Up the Project"
-// git push
-
-enum BreadType { white, wheat, wholemeal }
+import 'package:flutter/services.dart';
+import 'package:sandwitch_shop/views/app_styles.dart';
+import 'package:sandwitch_shop/models/sandwitch.dart';
+import 'package:sandwitch_shop/models/cart.dart';
 
 void main() {
   runApp(const App());
@@ -41,19 +32,17 @@ class OrderScreen extends StatefulWidget {
 }
 
 class _OrderScreenState extends State<OrderScreen> {
-  late final OrderRepository _orderRepository;
-  late final PriceCalc _priceCalc;
+  final Cart _cart = Cart();
   final TextEditingController _notesController = TextEditingController();
+
+  SandwichType _selectedSandwichType = SandwichType.veggieDelight;
   bool _isFootlong = true;
-  int price = 0;
-  bool _isToasted = false;
   BreadType _selectedBreadType = BreadType.white;
+  int _quantity = 1;
 
   @override
   void initState() {
     super.initState();
-    _priceCalc = PriceCalc();
-    _orderRepository = OrderRepository(maxQuantity: widget.maxQuantity);
     _notesController.addListener(() {
       setState(() {});
     });
@@ -65,58 +54,134 @@ class _OrderScreenState extends State<OrderScreen> {
     super.dispose();
   }
 
-  VoidCallback? _getIncreaseCallback() {
-    if (_orderRepository.canIncrement) {
-      return () => setState(_orderRepository.increment);
-    }
-    return null;
-  }
-
-  VoidCallback? _getDecreaseCallback() {
-    if (_orderRepository.canDecrement) {
-      return () => setState(_orderRepository.decrement);
-    }
-    return null;
-  }
-
-  void _onSandwichTypeChanged(bool value) {
-    setState(() => _isFootlong = value);
-  }
-
-  void _onBreadTypeSelected(BreadType? value) {
-    if (value != null) {
-      setState(() => _selectedBreadType = value);
-    }
-  }
-
-  List<DropdownMenuEntry<BreadType>> _buildDropdownEntries() {
-    List<DropdownMenuEntry<BreadType>> entries = [];
-    for (BreadType bread in BreadType.values) {
-      DropdownMenuEntry<BreadType> newEntry = DropdownMenuEntry<BreadType>(
-        value: bread,
-        label: bread.name,
+  void _addToCart() {
+    if (_quantity > 0) {
+      final Sandwich sandwich = Sandwich(
+        type: _selectedSandwichType,
+        isFootlong: _isFootlong,
+        breadType: _selectedBreadType,
       );
-      entries.add(newEntry);
+
+      setState(() {
+        _cart.add(sandwich, quantity: _quantity);
+      });
+
+      String sizeText;
+      if (_isFootlong) {
+        sizeText = 'footlong';
+      } else {
+        sizeText = 'six-inch';
+      }
+      String confirmationMessage =
+          'Added $_quantity $sizeText ${sandwich.name} sandwich(es) on ${_selectedBreadType.name} bread to cart';
+
+      debugPrint(confirmationMessage);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(confirmationMessage),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  VoidCallback? _getAddToCartCallback() {
+    if (_quantity > 0) {
+      return _addToCart;
+    }
+    return null;
+  }
+
+  List<DropdownMenuEntry<SandwichType>> _buildSandwichTypeEntries() {
+    List<DropdownMenuEntry<SandwichType>> entries = [];
+    for (SandwichType type in SandwichType.values) {
+      Sandwich sandwich =
+          Sandwich(type: type, isFootlong: true, breadType: BreadType.white);
+      DropdownMenuEntry<SandwichType> entry = DropdownMenuEntry<SandwichType>(
+        value: type,
+        label: sandwich.name,
+      );
+      entries.add(entry);
     }
     return entries;
   }
 
+  List<DropdownMenuEntry<BreadType>> _buildBreadTypeEntries() {
+    List<DropdownMenuEntry<BreadType>> entries = [];
+    for (BreadType bread in BreadType.values) {
+      DropdownMenuEntry<BreadType> entry = DropdownMenuEntry<BreadType>(
+        value: bread,
+        label: bread.name,
+      );
+      entries.add(entry);
+    }
+    return entries;
+  }
+
+  String _getCurrentImagePath() {
+    final Sandwich sandwich = Sandwich(
+      type: _selectedSandwichType,
+      isFootlong: _isFootlong,
+      breadType: _selectedBreadType,
+    );
+    return sandwich.image;
+  }
+
+  Future<bool> _assetExists(String path) async {
+    try {
+      await rootBundle.load(path);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _onSandwichTypeChanged(SandwichType? value) {
+    if (value != null) {
+      setState(() {
+        _selectedSandwichType = value;
+      });
+    }
+  }
+
+  void _onSizeChanged(bool value) {
+    setState(() {
+      _isFootlong = value;
+    });
+  }
+
+  void _onBreadTypeChanged(BreadType? value) {
+    if (value != null) {
+      setState(() {
+        _selectedBreadType = value;
+      });
+    }
+  }
+
+  void _increaseQuantity() {
+    setState(() {
+      _quantity++;
+    });
+  }
+
+  void _decreaseQuantity() {
+    if (_quantity > 0) {
+      setState(() {
+        _quantity--;
+      });
+    }
+  }
+
+  VoidCallback? _getDecreaseCallback() {
+    if (_quantity > 0) {
+      return _decreaseQuantity;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    String sandwichType = 'footlong';
-    if (!_isFootlong) {
-      sandwichType = 'six-inch';
-    }
-
-    price = _priceCalc.calcprice(_orderRepository.quantity,_isFootlong);
-
-    String noteForDisplay;
-    if (_notesController.text.isEmpty) {
-      noteForDisplay = 'No notes added.';
-    } else {
-      noteForDisplay = _notesController.text;
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -125,81 +190,141 @@ class _OrderScreenState extends State<OrderScreen> {
         ),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            OrderItemDisplay(
-              quantity: _orderRepository.quantity,
-              itemType: sandwichType,
-              breadType: _selectedBreadType,
-              orderNote: noteForDisplay,
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('six-inch', style: normalText),
-                Switch(
-                  key: const Key('aaaaaa'),
-                  value: _isFootlong,
-                  onChanged: _onSandwichTypeChanged,
-                ),
-                const Text('footlong', style: normalText),
-              ],
-            ),
-            const SizedBox(height: 10),
-            DropdownMenu<BreadType>(
-              textStyle: normalText,
-              initialSelection: _selectedBreadType,
-              onSelected: _onBreadTypeSelected,
-              dropdownMenuEntries: _buildDropdownEntries(),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.all(40.0),
-              child: TextField(
-                key: const Key('notes_textfield'),
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Add a note (e.g., no onions)',
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 300,
+                child: Builder(builder: (context) {
+                  final String path = _getCurrentImagePath();
+                  if (path.startsWith('http')) {
+                    return Image.network(
+                      path,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Text(
+                            'Image not found',
+                            style: normalText,
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  return FutureBuilder<bool>(
+                    future: _assetExists(path),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!(snapshot.hasData && snapshot.data == true)) {
+                        return const Center(
+                          child: Text(
+                            'Image not found',
+                            style: normalText,
+                          ),
+                        );
+                      }
+
+                      return Image.asset(
+                        path,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 20),
+              DropdownMenu<SandwichType>(
+                width: double.infinity,
+                label: const Text('Sandwich Type'),
+                textStyle: normalText,
+                initialSelection: _selectedSandwichType,
+                onSelected: _onSandwichTypeChanged,
+                dropdownMenuEntries: _buildSandwichTypeEntries(),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Six-inch', style: normalText),
+                  Switch(
+                    value: _isFootlong,
+                    onChanged: _onSizeChanged,
+                  ),
+                  const Text('Footlong', style: normalText),
+                ],
+              ),
+              const SizedBox(height: 20),
+              DropdownMenu<BreadType>(
+                width: double.infinity,
+                label: const Text('Bread Type'),
+                textStyle: normalText,
+                initialSelection: _selectedBreadType,
+                onSelected: _onBreadTypeChanged,
+                dropdownMenuEntries: _buildBreadTypeEntries(),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Quantity: ', style: normalText),
+                  IconButton(
+                    onPressed: _getDecreaseCallback(),
+                    icon: const Icon(Icons.remove),
+                  ),
+                  Text('$_quantity', style: heading2),
+                  IconButton(
+                    onPressed: _increaseQuantity,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              StyledButton(
+                onPressed: _getAddToCartCallback(),
+                icon: Icons.add_shopping_cart,
+                label: 'Add to Cart',
+                backgroundColor: Colors.green,
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Order Summary', style: heading2),
+                    const SizedBox(height: 8),
+                    if (_cart.isEmpty)
+                      const Text('Cart is empty', style: normalText)
+                    else ...[
+                      for (final item in _cart.items)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: OrderItemDisplay(
+                            quantity: item.quantity,
+                            itemType: (item.sandwich as Sandwich).name,
+                            breadType: (item.sandwich as Sandwich).breadType,
+                            orderNote: _notesController.text,
+                            imagePath: (item.sandwich as Sandwich).image,
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Text('Total items: ${_cart.totalItems}', style: normalText),
+                      Text('Total:  ${_cart.totalPrice.toStringAsFixed(2)}', style: normalText),
+                    ],
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                StyledButton(
-                  onPressed: _getIncreaseCallback(),
-                  icon: Icons.add,
-                  label: 'Add',
-                  backgroundColor: Colors.green,
-                ),
-                const SizedBox(width: 8),
-                StyledButton(
-                  onPressed: _getDecreaseCallback(),
-                  icon: Icons.remove,
-                  label: 'Remove',
-                  backgroundColor: Colors.red,
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('untoasted', style: normalText),
-                Switch(
-                  key: const Key('bbb'),
-                  value: _isToasted,
-                  onChanged: (value) {
-                    setState(() => _isToasted = value);
-                  },
-                ),
-                const Text('toasted', style: normalText),
-              ],
-            ),
-            Text('your order will cost '+price.toString()), // displays price
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -247,6 +372,7 @@ class OrderItemDisplay extends StatelessWidget {
   final String itemType;
   final BreadType breadType;
   final String orderNote;
+  final String imagePath;
 
   const OrderItemDisplay({
     super.key,
@@ -254,6 +380,7 @@ class OrderItemDisplay extends StatelessWidget {
     required this.itemType,
     required this.breadType,
     required this.orderNote,
+    required this.imagePath,
   });
 
   @override
@@ -261,16 +388,76 @@ class OrderItemDisplay extends StatelessWidget {
     String displayText =
         '$quantity ${breadType.name} $itemType sandwich(es): ${'🥪' * quantity}';
 
-    return Column(
-      children: [
-        Text(
-          displayText,
-          style: normalText,
+    Widget thumbnail;
+    if (imagePath.startsWith('http')) {
+      thumbnail = Image.network(
+        imagePath,
+        width: 72,
+        height: 72,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const SizedBox(
+          width: 72,
+          height: 72,
+          child: Center(child: Text('No image', style: normalText)),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Note: $orderNote',
-          style: normalText,
+      );
+    } else {
+      thumbnail = FutureBuilder<bool>(
+        future: (() async {
+          try {
+            await rootBundle.load(imagePath);
+            return true;
+          } catch (_) {
+            return false;
+          }
+        })(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+              width: 72,
+              height: 72,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (!(snapshot.hasData && snapshot.data == true)) {
+            return const SizedBox(
+              width: 72,
+              height: 72,
+              child: Center(child: Text('No image', style: normalText)),
+            );
+          }
+          return Image.asset(
+            imagePath,
+            width: 72,
+            height: 72,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    }
+
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: thumbnail,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayText,
+                style: normalText,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Note: $orderNote',
+                style: normalText,
+              ),
+            ],
+          ),
         ),
       ],
     );

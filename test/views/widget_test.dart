@@ -3,34 +3,45 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sandwitch_shop/main.dart';
 
 void main() {
-  testWidgets('switch state switch test', (WidgetTester tester) async {
-    // Wrap your screen with MaterialApp to provide context, theme, and directionality
+  testWidgets('switch toggles footlong state', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp( // provides directionality
         home: OrderScreen(),
       ),
     );
 
-    expect(find.byKey(const Key('aaaaaa')), findsOneWidget);
+    final Finder switchFinder = find.byType(Switch);
 
-    await tester.tap(find.byKey(const Key('aaaaaa')));
+    // initial value is true
+    expect(tester.widget<Switch>(switchFinder).value, isTrue);
+
+    await tester.tap(switchFinder);
     await tester.pump();
 
-    expect(find.text('six-inch'), findsOneWidget);
+    expect(tester.widget<Switch>(switchFinder).value, isFalse);
   });
-  testWidgets('switch state toasted test', (WidgetTester tester) async {
-    // Wrap your screen with MaterialApp to provide context, theme, and directionality
+
+  testWidgets('Add to Cart shows confirmation SnackBar', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp( // provides directionality
+      const MaterialApp(
         home: OrderScreen(),
       ),
     );
 
-    expect(find.byKey(const Key('bbb')), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('bbb')));
+    // Ensure the Add to Cart button is visible (scroll into view) then tap
+    await tester.ensureVisible(find.text('Add to Cart'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add to Cart'));
     await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('toasted'), findsOneWidget);
+    // SnackBar should be shown
+    expect(find.byType(SnackBar), findsOneWidget);
+
+    // The SnackBar contains a Text widget with the confirmation message
+    final Finder confirmationTextFinder = find.byWidgetPredicate(
+      (widget) => widget is Text && (widget.data ?? '').contains('Added 1'),
+    );
+    expect(confirmationTextFinder, findsOneWidget);
   });
 }
